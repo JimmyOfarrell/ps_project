@@ -21,14 +21,67 @@ from utils.utils import str2bool
 from utils.saver import Saver
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+print('\n'+'='*60)
+print('='*60)
 
 
 
-""" def main(args=None, sam_args=None, saver=None):
-    if args['device']=='cuda':
-        args['device'] = torch.device("cuda:"+str(args['device_id']))
+def main(args=None, sam_args=None, saver=None):
+    print('\n'+'='*60)
+    print("[MAIN] Device configuration")
+    if str(args['device']).lower() == 'cuda':
+        if not torch.cuda.is_available():
+            print(f"[WARNING] CUDA requested but not available. Falling back to CPU.")
+            args['device'] = torch.device("cpu")
+        else:
+            num_gpus = torch.cuda.device_count()
+            device_id = int(args.get('device_id', 0))
+            if device_id >= num_gpus or device_id < 0:
+                print(f"[WARNING] device_id={device_id} is out of range (only {num_gpus} GPU(s) available). Using device 0.")
+                device_id = 0
+                args['device_id'] = 0    
+            args['device'] = torch.device(f"cuda:{device_id}")
+            torch.cuda.set_device(device_id) 
+
+            gpu_name = torch.cuda.get_device_name(device_id)
+            gpu_props = torch.cuda.get_device_properties(device_id)
+            total_vram_gb = gpu_props.total_memory / (1024**3)
+
+            print(f"[MAIN] Device        : {args['device']}")
+            print(f"[MAIN] GPU name      : {gpu_name}")
+            print(f"[MAIN] Total VRAM    : {total_vram_gb:.2f} GB")
+            print(f"[MAIN] CUDA version  : {torch.version.cuda}")
+            print(f"[MAIN] PyTorch version: {torch.__version__}")
+
+            cc = (gpu_props.major, gpu_props.minor)
+            print(f"[MAIN] Compute capability: {cc[0]}.{cc[1]}")
+
+            if cc < (6, 0): print(f"[WARNING] GPU compute capability {cc[0]}.{cc[1]} is below 6.0. Mixed precision (AMP) may not work properly.")
+            if cc < (7, 0) and args.get('use_cuda_amp', False): print(f"[WARNING] GPU compute capability {cc[0]}.{cc[1]} is below 7.0. Tensor Cores not available; AMP will be limited.")
+
+            try:
+                free_vram, total_vram = torch.cuda.mem_get_info(device_id)
+                free_vram_gb = free_vram / (1024**3)
+                print(f"[MAIN] Free VRAM     : {free_vram_gb:.2f} GB")
+            
+                if args.get('use_sam', False) and free_vram_gb < 8:
+                    print(f"[WARNING] Free VRAM ({free_vram_gb:.2f} GB) may be insufficient for Phase 1 with SAM (ViT-B). Consider:")
+                    print(f"         - Smaller batch size (-bs)")
+                    print(f"         - Using --use_cuda_amp True")
+                    print(f"         - Using a smaller SAM variant (sam_vit_b)")
+            except Exception: pass 
     else:
         args['device'] = torch.device("cpu")
+        print(f"[MAIN] Device        : CPU")
+        print(f"[MAIN] PyTorch version: {torch.__version__}")
+        if args.get('use_sam', False):
+            print(f"[WARNING] Running Phase 1 with SAM on CPU will be extremely slow!")
+            print(f"         Consider using a GPU for training.")
+        if args.get('use_cuda_amp', False):
+            print(f"[WARNING] AMP is enabled but device is CPU. Disabling AMP.")
+            args['use_cuda_amp'] = False
+    print('='*60)
+        
     
     if args['use_sam']:
         sam = sam_model_registry[sam_args['model_type']](checkpoint=sam_args['sam_checkpoint'])
@@ -153,7 +206,7 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
         
     f_best.close()
 
- """
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""
@@ -183,6 +236,7 @@ For usage examples, see README.md
     parser.add_argument('--sam_ckpt', type=str, default='sam_vit_b', choices = ['sam_vit_b', 'medsam_vit_b', 'sam_vit_h'], help='SAM checkpoint')
     parser.add_argument('--sam_version', type=str, default='vit_b', choices = ['vit_b', 'vit_h'], help='SAM version')
     parser.add_argument('--device_id', type=int, default=0, help='GPU index')
+    parser.add_argument('--device', default='cuda', help="Device: 'cuda' or 'cpu'")
     args = vars(parser.parse_args())
     print(parser.description)
     
@@ -199,7 +253,7 @@ For usage examples, see README.md
     parser.add_argument('-rotate', '--rotate', default=22, help='image size', required=False)
     parser.add_argument('-scale1', '--scale1', default=0.75, help='image size', required=False)
     parser.add_argument('-scale2', '--scale2', default=1.25, help='image size', required=False)
-    parser.add_argument('--device', default='cuda', help='device', required=False)
+
     parser.add_argument('--data_dir', type=str, default='', help='Path to the dataset directory', required=False)
     parser.add_argument('--split_path', type=str, default='3DAutoSam_Pancreas/Dataset.json', help='Path to the split file')
     parser.add_argument('--train_batch_size', type=int, default=8)
