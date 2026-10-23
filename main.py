@@ -162,6 +162,7 @@ Task   : Automated Polyp Segmentation
 Input  : Colonoscopy RGB Images
 Output : Binary Polyp Segmentation Masks
 ============================================================""", formatter_class=argparse.RawDescriptionHelpFormatter)
+    args = vars(parser.parse_args())
     print(parser.description)
     
     """ parser.add_argument('-lr', '--learning_rate', default=0.01, help='learning_rate', required=False)
@@ -250,7 +251,7 @@ Output : Binary Polyp Segmentation Masks
     
     parser.add_argument('--seed', type=int, default=42, help='Seed')
     
-    args = vars(parser.parse_args())
+
     
     set_seed(args['seed'])
     
