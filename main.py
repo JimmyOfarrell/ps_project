@@ -179,6 +179,10 @@ For usage examples, see README.md
     parser.add_argument('--wandb_project', default='PS_PROJECT', help='WandB project name')
     parser.add_argument('--wandb_entity', default=None, help='WandB entity (username or team)')
     parser.add_argument('--wandb_tags', type=str, nargs='+', default=[], help='Wandb tags')
+    parser.add_argument('--use_sam', type=str2bool, default=True, help='Use SAM (phase 1) vs aggregator only (phase 2)')
+    parser.add_argument('--sam_ckpt', type=str, default='sam_vit_b', choices = ['sam_vit_b', 'medsam_vit_b', 'sam_vit_h'], help='SAM checkpoint')
+    parser.add_argument('--sam_version', type=str, default='vit_b', choices = ['vit_b', 'vit_h'], help='SAM version')
+    parser.add_argument('--device_id', type=int, default=0, help='GPU index')
     args = vars(parser.parse_args())
     print(parser.description)
     
@@ -196,7 +200,6 @@ For usage examples, see README.md
     parser.add_argument('-scale1', '--scale1', default=0.75, help='image size', required=False)
     parser.add_argument('-scale2', '--scale2', default=1.25, help='image size', required=False)
     parser.add_argument('--device', default='cuda', help='device', required=False)
-    parser.add_argument('--device_id', default=0, help='device id', required=False)
     parser.add_argument('--data_dir', type=str, default='', help='Path to the dataset directory', required=False)
     parser.add_argument('--split_path', type=str, default='3DAutoSam_Pancreas/Dataset.json', help='Path to the split file')
     parser.add_argument('--train_batch_size', type=int, default=8)
@@ -238,15 +241,13 @@ For usage examples, see README.md
 
     parser.add_argument('--remove_maxpool', type=str2bool, default=False, help='Remove first maxpool when ResNet is used as embedding model')
     
-    parser.add_argument('--use_sam', type=str2bool, default=True, help='Use SAM')
     parser.add_argument('--use_standard_net', type=str2bool, default=False, help='Use standard net')
     parser.add_argument('--net', type=str, default='HardNetSegmentor', help='Net')
     parser.add_argument('--net_segmentor', type=str, default='PointwiseConv', help='Net segmentor')
     parser.add_argument('--sam_zeroshot', type=str2bool, default=False, help='SAM zero shot')
     parser.add_argument('--upsample_factor_list', type=int, nargs='+', default=[2, 2], help='Upsample factor list for ConvUpsample segmentor')
     
-    parser.add_argument('--sam_ckpt', type=str, default='sam_vit_b', choices = ['sam_vit_b', 'medsam_vit_b', 'sam_vit_h'], help='SAM checkpoint')
-    parser.add_argument('--sam_version', type=str, default='vit_b', choices = ['vit_b', 'vit_h'], help='SAM version')
+
     parser.add_argument('--wandb_watch', type=str2bool, default=False, help='Wandb watch')
     parser.add_argument('--wandb_watch_freq', type=int, default=10, help='Wandb watch frequency')
 
@@ -278,10 +279,12 @@ For usage examples, see README.md
     args['best_ckpt_path'] = os.path.join(saver.ckpt_path, 'net_best.pth')
     args['vis_folder'] = saver.vis_path
     saver.log_hparams(args)
-    input('stop!!!!')
-    
+
+    print('\n'+'='*60)
     if args['use_sam']:
-        sam_ckpt = "cp/" + args['sam_ckpt'] + ".pth"
+        sam_ckpt = os.path.join(PROJECT_DIR, 'cp', f"{args['sam_ckpt']}.pth")
+        if not os.path.exists(sam_ckpt): raise FileNotFoundError(f"SAM checkpoint not found: {sam_ckpt}\n Please download {args['sam_ckpt']}.pth into the cp/ folder.")
+        
         sam_args = {
             'sam_checkpoint': sam_ckpt,
             'model_type': args['sam_version'],
@@ -297,6 +300,12 @@ For usage examples, see README.md
             },
             'gpu_id': args['device_id'],
         }
+        print(f"[MAIN] SAM checkpoint path: {sam_ckpt}")
+        print(f"[MAIN] SAM Model type : {args['sam_version']}")
     else:
         sam_args = None
+        print("[MAIN] SAM is disabled.")
+    print('='*60)
+    input('stop!!')
+
     main(args=args, sam_args=sam_args, saver=saver)
