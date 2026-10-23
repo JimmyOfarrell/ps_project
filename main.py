@@ -16,6 +16,7 @@ from utils.scheduler import WarmupCosineSchedule, WarmupLinearSchedule
 
 
 import argparse
+from utils.utils import str2bool
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -169,6 +170,8 @@ is replaced by a lightweight aggregator for efficient deployment.
 
 For usage examples, see README.md
 ============================================================""", formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
+    parser.add_argument('--strict_determinism', type=str2bool, default=False, help='Enable strict determinism (slower but reproducible). Use True for final thesis experiments.')
     args = vars(parser.parse_args())
     print(parser.description)
     
@@ -260,9 +263,13 @@ For usage examples, see README.md
     
 
     
-    set_seed(args['seed'])
+    set_seed(args['seed'], strict=args['strict_determinism'])
+
+    args['experiment_name'] = args['exp_name']
+    output_root = os.path.join(PROJECT_DIR, 'results')
+
+    saver = Saver(output_folder=output_root, args=args)
     
-    args['experiment_name']= args['exp_name']
     args['exp_folder'] = os.path.join('results', args['experiment_name'])
     saver = Saver(output_folder='results', experiment_name=args['experiment_name'], wandb_mode=args['wandb_mode'], wandb_project=args['wandb_project'], wandb_entity=args['wandb_entity'], args=args)
     args['path']= saver.path

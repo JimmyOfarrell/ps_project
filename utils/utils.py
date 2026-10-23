@@ -1,25 +1,34 @@
-import argparse
-import torch
-import numpy as np
 import os
-import torch.nn.functional as F
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 import random
+import numpy as np
+import torch
 from monai.utils import set_determinism
-from torch import nn
 
-def set_seed(seed):
-    random.seed(seed)  # Per il modulo random di Python
-    np.random.seed(seed)  # Per NumPy
-    torch.manual_seed(seed)  # Per il generatore di numeri casuali di PyTorch
-    torch.cuda.manual_seed(seed)  # Per i generatori CUDA su ogni GPU
-    #torch.cuda.manual_seed_all(seed)  # Per tutti i generatori CUDA (se si usa multi-GPU)
-    
-    # Imposta PyTorch in modalità deterministica (potrebbe rallentare l'esecuzione)
-    #torch.backends.cudnn.deterministic = True
-    #torch.backends.cudnn.benchmark = False  # Disabilita l'ottimizzazione basata sul benchmarking
+def set_seed(seed, strict=True):
+    os.environ["PYTHONHASHSEED"] = str(seed)
 
-    # MONAI (necessario perché utilizza il proprio generatore di numeri casuali)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
     set_determinism(seed=seed)
+
+    if strict:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        try:torch.use_deterministic_algorithms(True, warn_only=True)
+        except TypeError: torch.use_deterministic_algorithms(True)
+        print(f"[set_seed] Strict determinism enabled (seed={seed}). "
+              f"Training may be slower.")
+    else:
+        torch.backends.cudnn.deterministic = False
+        torch.backends.cudnn.benchmark = True
+        try: torch.use_deterministic_algorithms(False)  
+        except Exception: pass
+        print(f"[set_seed] Fast non-deterministic mode (seed={seed}).")  
 
 def norm_batch(x):
     bs = x.shape[0]
