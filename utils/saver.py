@@ -69,6 +69,44 @@ class Saver:
         
         print('='*60)
 
+    def log_cmd(self, cmd):
+        print('\n'+'='*60)
+        print(f"[SAVER] Command: {cmd}")
+        self.writer.add_text('cmd', cmd, 0)
+
+        out_path = os.path.join(self.path, 'cmd.json')
+        with open(out_path, 'w', encoding='utf-8') as fp: json.dump({'cmd': cmd}, fp, indent=2, ensure_ascii=False)
+        print(f"[SAVER] Command saved: {out_path}")
+
+        if getattr(self, 'wandb_enabled', False): wandb.config.update({'cmd': cmd}, allow_val_change=True)
+        print('='*60)
+
+        return out_path
+
+    def log_hparams(self, params_dict):
+        hparams_str = json.dumps(params_dict, indent=2, default=str)
+        
+        print('\n'+'='*60)
+        try:self.writer.add_text("hparams", hparams_str, 0)
+        except Exception as e: print(f"[WARNING] TensorBoard hyperparameter logging failed: {type(e).__name__}: {e}")
+
+        if self.wandb_enabled:
+            try: wandb.config.update(params_dict, allow_val_change=True)
+            except Exception as e:
+                print(f"[WARNING] WandB config update failed: {type(e).__name__}: {e}")
+                print("[WARNING] Continuing with local hyperparameter logging.")
+        else: print("[SAVER] WandB is disabled; skipping configuration update.")        
+
+        out_path = os.path.join(self.path, 'hparams.json')
+        print(f"[SAVER] JSON output path: {out_path}")
+
+        try:
+            with open(out_path, 'w', encoding='utf-8') as fp: json.dump(params_dict, fp, indent=2, default=str, ensure_ascii=False)
+        except Exception as e:print(f"[ERROR] Failed to save hparams.json: {type(e).__name__}: {e}")
+
+        print('='*60)
+        return out_path
+
     def save_model(self, net, name: str, step: int):
         """
         Save model parameters in the checkpoint directory.
@@ -132,19 +170,8 @@ class Saver:
     def log_text(self,title:str,text:str,step:int):
         self.writer.add_text(title,text,step)
 
-    def log_hparams(self,params_dict):
-        #self.writer.add_hparams(params_dict)
-        
-        self.writer.add_text('hparams',str(params_dict),0)
-        wandb.config.update(params_dict, allow_val_change=True)
-        with open(os.path.join(self.path, 'hparams.json'), 'w') as fp:
-            json.dump(params_dict, fp)
+    
 
-    def log_cmd(self, cmd):
-        self.writer.add_text(cmd, cmd, 0)
-
-        with open(os.path.join(self.path, 'cmd.json'), 'w') as fp:
-            json.dump(cmd, fp)
             
     def wb_mask(self, img, mask, gt):
         return wandb.Image(img, masks={"ground_truth" : {"mask_data" : gt, 

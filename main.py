@@ -1,8 +1,6 @@
 import torch.optim as optim
 import torch
-import os
-from utils.saver import Saver
-import sys
+
 from inference import inference_ds_monai
 from train import train_single_epoch, train_single_epoch_monai
 from utils.model_utils import get_model, get_standard_model
@@ -15,7 +13,10 @@ from utils.scheduler import WarmupCosineSchedule, WarmupLinearSchedule
 
 
 
+import os
 import argparse
+import sys
+import shlex
 from utils.utils import str2bool
 from utils.saver import Saver
 
@@ -269,19 +270,15 @@ For usage examples, see README.md
     output_root = os.path.join(PROJECT_DIR, 'results')
 
     saver = Saver(output_folder=output_root, args=args)
-    input('stop!!!')
-    
-    args['exp_folder'] = os.path.join('results', args['experiment_name'])
-    saver = Saver(output_folder='results', experiment_name=args['experiment_name'], wandb_mode=args['wandb_mode'], wandb_project=args['wandb_project'], wandb_entity=args['wandb_entity'], args=args)
-    args['path']= saver.path
-    saver.log_hparams(args)
-    cmd = str(sys.argv)
+    cmd = f"{sys.executable} " + " ".join(shlex.quote(arg) for arg in sys.argv)
     saver.log_cmd(cmd)
-    args['path'] = os.path.join(saver.path,
-                                'net_last.pth')
-    args['path_best'] = os.path.join(saver.path,
-                                     'net_best.pth')
-    args['vis_folder'] = os.path.join(saver.path, 'vis')
+
+    args['exp_folder'] = saver.path
+    args['last_ckpt_path'] = os.path.join(saver.ckpt_path, 'net_last.pth')
+    args['best_ckpt_path'] = os.path.join(saver.ckpt_path, 'net_best.pth')
+    args['vis_folder'] = saver.vis_path
+    saver.log_hparams(args)
+    input('stop!!!!')
     
     if args['use_sam']:
         sam_ckpt = "cp/" + args['sam_ckpt'] + ".pth"
