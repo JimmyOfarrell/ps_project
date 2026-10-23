@@ -81,6 +81,7 @@ def main(args=None, sam_args=None, saver=None):
             print(f"[WARNING] AMP is enabled but device is CPU. Disabling AMP.")
             args['use_cuda_amp'] = False
     print('='*60)
+    print('stop')
         
     
     if args['use_sam']:
@@ -360,6 +361,5 @@ For usage examples, see README.md
         sam_args = None
         print("[MAIN] SAM is disabled.")
     print('='*60)
-    input('stop!!')
 
     main(args=args, sam_args=sam_args, saver=saver)
