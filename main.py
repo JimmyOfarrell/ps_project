@@ -174,6 +174,10 @@ For usage examples, see README.md
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     parser.add_argument('--strict_determinism', type=str2bool, default=False, help='Enable strict determinism (slower but reproducible). Use True for final thesis experiments.')
     parser.add_argument('--exp_name', required=True, help='Experiment name (required)')
+    parser.add_argument('--wandb_mode', default='online', choices=['online', 'offline', 'disabled'], help='WandB mode')
+    parser.add_argument('--wandb_project', default='PS_PROJECT', help='WandB project name')
+    parser.add_argument('--wandb_entity', default=None, help='WandB entity (username or team)')
+    parser.add_argument('--wandb_tags', type=str, nargs='+', default=[], help='Wandb tags')
     args = vars(parser.parse_args())
     print(parser.description)
     
@@ -190,11 +194,8 @@ For usage examples, see README.md
     parser.add_argument('-rotate', '--rotate', default=22, help='image size', required=False)
     parser.add_argument('-scale1', '--scale1', default=0.75, help='image size', required=False)
     parser.add_argument('-scale2', '--scale2', default=1.25, help='image size', required=False)
-    parser.add_argument('--wandb_mode', default='online', help='wandb mode', required=False)
     parser.add_argument('--device', default='cuda', help='device', required=False)
     parser.add_argument('--device_id', default=0, help='device id', required=False)
-    parser.add_argument('--wandb_project', default='AutoSam_Pancreas', help='wandb project', required=False)
-    parser.add_argument('--wandb_entity', default='fproietto', help='wandb entity', required=False)
     parser.add_argument('--data_dir', type=str, default='', help='Path to the dataset directory', required=False)
     parser.add_argument('--split_path', type=str, default='3DAutoSam_Pancreas/Dataset.json', help='Path to the split file')
     parser.add_argument('--train_batch_size', type=int, default=8)
@@ -245,7 +246,6 @@ For usage examples, see README.md
     
     parser.add_argument('--sam_ckpt', type=str, default='sam_vit_b', choices = ['sam_vit_b', 'medsam_vit_b', 'sam_vit_h'], help='SAM checkpoint')
     parser.add_argument('--sam_version', type=str, default='vit_b', choices = ['vit_b', 'vit_h'], help='SAM version')
-    parser.add_argument('--wandb_tags', type=str, nargs='+', default=[], help='Wandb tags')
     parser.add_argument('--wandb_watch', type=str2bool, default=False, help='Wandb watch')
     parser.add_argument('--wandb_watch_freq', type=int, default=10, help='Wandb watch frequency')
 
@@ -269,6 +269,7 @@ For usage examples, see README.md
     output_root = os.path.join(PROJECT_DIR, 'results')
 
     saver = Saver(output_folder=output_root, args=args)
+    input('stop!!!')
     
     args['exp_folder'] = os.path.join('results', args['experiment_name'])
     saver = Saver(output_folder='results', experiment_name=args['experiment_name'], wandb_mode=args['wandb_mode'], wandb_project=args['wandb_project'], wandb_entity=args['wandb_entity'], args=args)

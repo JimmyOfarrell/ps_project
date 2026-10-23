@@ -1,41 +1,71 @@
-from pathlib import Path
-from time import time
-from datetime import datetime
 import os
-import torch
-from torch.utils.tensorboard import SummaryWriter
-import torchvision
-import json
 import csv
 import wandb
+from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
+
+
+from pathlib import Path
+from time import time
+
+
+
+import torch
+
+import torchvision
+import json
+
+
 import numpy as np 
 import matplotlib.pyplot as plt
 
 
-class Saver(object):
-    """
-    Saver allows for saving and restore networks.
-    """
+class Saver:
+    def __init__(self, output_folder, args):
+        experiment_name = args['experiment_name']
+        wandb_mode, wandb_project, wandb_entity  = args['wandb_mode'], args['wandb_project'], args['wandb_entity']
+        if wandb_mode not in {"online", "offline", "disabled"}: raise ValueError(f"Unsupported wandb_mode: {wandb_mode!r}")
 
-    def __init__(self, output_folder: Path, experiment_name: str, wandb_mode: str, wandb_project: str, wandb_entity: str, args):
-        timestamp_str = datetime.fromtimestamp(
-            time()).strftime('%Y-%m-%d_%H-%M-%S')
-        self.path = os.path.join(output_folder, f'{timestamp_str+"_"+experiment_name}')
-        print(self.path)
-        self.writer = SummaryWriter(str(self.path))
-        self.csv_file = os.path.join(self.path,'metrics.csv')
-        # Create checkpoint sub-directory
-        self.ckpt_path = os.path.join(self.path,'ckpt')
-        os.makedirs(self.ckpt_path)
-        self.vis_path = os.path.join(self.path,'vis')
-        os.makedirs(self.vis_path)
-        #wandb
+        timestamp_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.path = os.path.join(output_folder, f'{timestamp_str}_{experiment_name}')
+        os.makedirs(self.path, exist_ok=True)
+        print(f"[SAVER] Experiment directory created: {self.path}")
+
+        self.writer = SummaryWriter(str(self.path), flush_secs=30)
+
+        self.csv_file = os.path.join(self.path, 'metrics.csv')
+        with open(self.csv_file, 'w', encoding='UTF8', newline='') as f: csv.writer(f).writerow(['metric', 'epoch', 'value'])
+        print(f"[SAVER] Metrics CSV initialized: {self.csv_file}")
+
+        self.ckpt_path = os.path.join(self.path, 'ckpt')
+        self.vis_path  = os.path.join(self.path, 'vis')
+        os.makedirs(self.ckpt_path, exist_ok=True)
+        os.makedirs(self.vis_path,  exist_ok=True)
+        print(f"[SAVER] Checkpoint directory initialized: {self.ckpt_path}")
+        print(f"[SAVER] Visualization directory initialized: {self.vis_path}")
         
         self.metrics_table = None
         self.columns = None
         self.rows = []
-        
-        wandb.init( project=wandb_project, entity=wandb_entity,mode=wandb_mode, tags=args['wandb_tags'])
+
+        self.wandb_enabled = False
+        self.wandb_run = None
+
+        try:
+            wandb_settings = wandb.Settings(mode=wandb_mode)
+            self.wandb_run = wandb.init(project=wandb_project, entity=wandb_entity, settings=wandb_settings, tags=args.get('wandb_tags', []), name=experiment_name, config=args, dir=self.path)
+            self.wandb_enabled = (wandb_mode != 'disabled') and (wandb.run is not None)
+                
+            if self.wandb_enabled:
+                print(f"\n{'='*60}")
+                print(f"[SAVER] W&B initialized | run_id={self.wandb_run.id}, url={self.wandb_run.url}")
+            else:
+                print(f"[SAVER] W&B logging inactive | mode={wandb_mode}")
+        except Exception as e:
+            self.wandb_enabled = False
+            self.wandb_run = None
+            print(f"[WARNING] W&B initialization failed | error={type(e).__name__}: {e}")
+            print("[SAVER] Continuing with local logging only.")
         
 
     def save_model(self, net, name: str, step: int):
