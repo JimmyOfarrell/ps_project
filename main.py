@@ -17,6 +17,7 @@ from utils.scheduler import WarmupCosineSchedule, WarmupLinearSchedule
 
 import argparse
 from utils.utils import str2bool
+from utils.saver import Saver
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -169,9 +170,10 @@ training to guide a dense prompt learner. At inference, SAM
 is replaced by a lightweight aggregator for efficient deployment.
 
 For usage examples, see README.md
-============================================================""", formatter_class=argparse.RawDescriptionHelpFormatter)
+============================================================\n""", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility')
     parser.add_argument('--strict_determinism', type=str2bool, default=False, help='Enable strict determinism (slower but reproducible). Use True for final thesis experiments.')
+    parser.add_argument('--exp_name', required=True, help='Experiment name (required)')
     args = vars(parser.parse_args())
     print(parser.description)
     
@@ -193,7 +195,6 @@ For usage examples, see README.md
     parser.add_argument('--device_id', default=0, help='device id', required=False)
     parser.add_argument('--wandb_project', default='AutoSam_Pancreas', help='wandb project', required=False)
     parser.add_argument('--wandb_entity', default='fproietto', help='wandb entity', required=False)
-    parser.add_argument('--exp_name', required=True)
     parser.add_argument('--data_dir', type=str, default='', help='Path to the dataset directory', required=False)
     parser.add_argument('--split_path', type=str, default='3DAutoSam_Pancreas/Dataset.json', help='Path to the split file')
     parser.add_argument('--train_batch_size', type=int, default=8)
@@ -262,7 +263,6 @@ For usage examples, see README.md
     parser.add_argument('--seed', type=int, default=42, help='Seed')"""
     
 
-    
     set_seed(args['seed'], strict=args['strict_determinism'])
 
     args['experiment_name'] = args['exp_name']

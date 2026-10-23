@@ -6,6 +6,7 @@ import torch
 from monai.utils import set_determinism
 
 def set_seed(seed, strict=True):
+    print('='*60)
     os.environ["PYTHONHASHSEED"] = str(seed)
 
     random.seed(seed)
@@ -28,7 +29,9 @@ def set_seed(seed, strict=True):
         torch.backends.cudnn.benchmark = True
         try: torch.use_deterministic_algorithms(False)  
         except Exception: pass
-        print(f"[set_seed] Fast non-deterministic mode (seed={seed}).")  
+        print(f"[set_seed] Fast non-deterministic mode (seed={seed}).")
+
+    print('='*60)      
 
 def norm_batch(x):
     bs = x.shape[0]
