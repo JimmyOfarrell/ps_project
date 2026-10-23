@@ -157,10 +157,17 @@ if __name__ == '__main__':
 ============================================================
             POLYP SEGMENTATION FRAMEWORK
 ============================================================
-Method : SAM-Guided Prompt Learning
-Task   : Automated Polyp Segmentation
-Input  : Colonoscopy RGB Images
+Method : SAM-Guided Prompt Learning for Polyp Segmentation
+Task   : Automated Polyp Detection and Segmentation
+Input  : Colonoscopy RGB Images (2D)
 Output : Binary Polyp Segmentation Masks
+============================================================
+
+This framework leverages Segment Anything Model (SAM) during 
+training to guide a dense prompt learner. At inference, SAM 
+is replaced by a lightweight aggregator for efficient deployment.
+
+For usage examples, see README.md
 ============================================================""", formatter_class=argparse.RawDescriptionHelpFormatter)
     args = vars(parser.parse_args())
     print(parser.description)
@@ -249,7 +256,7 @@ Output : Binary Polyp Segmentation Masks
     
     parser.add_argument('--disable_batchnorm_running_stats', type=str2bool, default=False, help='Disable batchnorm running stats')
     
-    parser.add_argument('--seed', type=int, default=42, help='Seed')
+    parser.add_argument('--seed', type=int, default=42, help='Seed')"""
     
 
     
@@ -288,5 +295,3 @@ Output : Binary Polyp Segmentation Masks
     else:
         sam_args = None
     main(args=args, sam_args=sam_args, saver=saver)
-
- """
