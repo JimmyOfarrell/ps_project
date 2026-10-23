@@ -3,6 +3,7 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 import random
 import numpy as np
 import torch
+import torch.nn as nn
 from monai.utils import set_determinism
 
 def set_seed(seed, strict=True):
@@ -32,6 +33,16 @@ def set_seed(seed, strict=True):
         print(f"[set_seed] Fast non-deterministic mode (seed={seed}).")
 
     print('='*60)      
+
+def disable_batchnorm_running_stats(model):
+    count = 0
+    for module in model.modules():
+            if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+                module.track_running_stats = False
+                module.running_mean = None
+                module.running_var = None
+                count += 1
+    print(f"[disable_batchnorm_running_stats] Disabled BN running stats on {count} layer(s) in {type(model).__name__}")    
 
 def norm_batch(x):
     bs = x.shape[0]
@@ -139,11 +150,6 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
     
-def disable_batchnorm_running_stats(model):
-    for module in model.modules():
-        if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm3d):
-            module.track_running_stats = False
-            module.running_mean = None
-            module.running_var = None
+
 
 

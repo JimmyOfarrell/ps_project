@@ -1,12 +1,12 @@
 import torch.optim as optim
-import torch
+
 
 from inference import inference_ds_monai
 from train import train_single_epoch, train_single_epoch_monai
 from utils.model_utils import get_model, get_standard_model
 from utils.dataset_utils import get_dataset
 from segment_anything.utils.transforms import ResizeLongestSide
-from segment_anything import sam_model_registry
+
 from utils.utils import str2bool, set_seed, disable_batchnorm_running_stats
 import wandb
 from utils.scheduler import WarmupCosineSchedule, WarmupLinearSchedule
@@ -14,9 +14,11 @@ from utils.scheduler import WarmupCosineSchedule, WarmupLinearSchedule
 
 
 import os
+import torch
 import argparse
 import sys
 import shlex
+from segment_anything import sam_model_registry
 from utils.utils import str2bool
 from utils.saver import Saver
 
@@ -81,20 +83,33 @@ def main(args=None, sam_args=None, saver=None):
             print(f"[WARNING] AMP is enabled but device is CPU. Disabling AMP.")
             args['use_cuda_amp'] = False
     print('='*60)
-    print('stop')
         
-    
+    print('\n'+'='*60)
     if args['use_sam']:
-        sam = sam_model_registry[sam_args['model_type']](checkpoint=sam_args['sam_checkpoint'])
+        print("[MAIN] SAM model (Phase 1: SAM-guided prompt learning) Configuration")
+        try: sam = sam_model_registry[sam_args['model_type']](checkpoint=sam_args['sam_checkpoint'])
+        except Exception as e: raise RuntimeError(f"Failed to load SAM '{sam_args['model_type']}' from '{sam_args['sam_checkpoint']}': {e}")
         sam.to(device=args['device'])
+        sam.eval()
+        for param in sam.parameters(): param.requires_grad = False
+        sam_params = sum(p.numel() for p in sam.parameters())
+        sam_memory_mb = sum(p.numel() * p.element_size() for p in sam.parameters()) / (1024**2)
         img_dim = sam.image_encoder.img_size
-        transform = ResizeLongestSide(img_dim)
+        print(f"[MAIN] SAM input resolution: {img_dim}x{img_dim}")
+        print(f"[MAIN] SAM Parameters: {sam_params:,}")
+        print(f"[MAIN] SAM Memory: {sam_memory_mb:.2f} MB")
+        print(f"[MAIN] SAM Device: {args['device']}")
+        print(f"[MAIN] SAM Mode: Frozen (eval)")
         if args['disable_batchnorm_running_stats']:
             disable_batchnorm_running_stats(sam)
+            print("[MAIN] BatchNorm running stats disabled for SAM.")
     else:
         sam = None
         img_dim = int(args['Idim'])
-        transform = None
+        print("[MAIN] SAM is disabled. Using standard segmentor directly.")
+        print(f"[MAIN] Using Idim = {img_dim}×{img_dim} for prompt learner input")
+    print('='*60)   
+    input('stop') 
     
     ds, ds_val = get_dataset(args, transform, img_dim)
     img_ch = ds.dataset[0][0][args['image_key']].shape[0]
@@ -238,6 +253,7 @@ For usage examples, see README.md
     parser.add_argument('--sam_version', type=str, default='vit_b', choices = ['vit_b', 'vit_h'], help='SAM version')
     parser.add_argument('--device_id', type=int, default=0, help='GPU index')
     parser.add_argument('--device', default='cuda', help="Device: 'cuda' or 'cpu'")
+    parser.add_argument('-Idim', '--Idim', type=int, default=512, help='Input image size (resize resolution)')
     args = vars(parser.parse_args())
     print(parser.description)
     
