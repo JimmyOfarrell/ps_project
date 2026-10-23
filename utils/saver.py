@@ -29,6 +29,7 @@ class Saver:
         timestamp_str = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.path = os.path.join(output_folder, f'{timestamp_str}_{experiment_name}')
         os.makedirs(self.path, exist_ok=True)
+        print('\n'+'='*60)
         print(f"[SAVER] Experiment directory created: {self.path}")
 
         self.writer = SummaryWriter(str(self.path), flush_secs=30)
@@ -57,7 +58,6 @@ class Saver:
             self.wandb_enabled = (wandb_mode != 'disabled') and (wandb.run is not None)
                 
             if self.wandb_enabled:
-                print(f"\n{'='*60}")
                 print(f"[SAVER] W&B initialized | run_id={self.wandb_run.id}, url={self.wandb_run.url}")
             else:
                 print(f"[SAVER] W&B logging inactive | mode={wandb_mode}")
@@ -67,6 +67,7 @@ class Saver:
             print(f"[WARNING] W&B initialization failed | error={type(e).__name__}: {e}")
             print("[SAVER] Continuing with local logging only.")
         
+        print('='*60)
 
     def save_model(self, net, name: str, step: int):
         """
