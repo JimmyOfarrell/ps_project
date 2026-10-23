@@ -21,7 +21,7 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 
-def main(args=None, sam_args=None, saver=None):
+""" def main(args=None, sam_args=None, saver=None):
     if args['device']=='cuda':
         args['device'] = torch.device("cuda:"+str(args['device_id']))
     else:
@@ -150,6 +150,8 @@ def main(args=None, sam_args=None, saver=None):
         
     f_best.close()
 
+ """
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""
 ============================================================
@@ -162,8 +164,7 @@ Output : Binary Polyp Segmentation Masks
 ============================================================""", formatter_class=argparse.RawDescriptionHelpFormatter)
     print(parser.description)
     
-    parser = argparse.ArgumentParser(description='Description of your program')
-    parser.add_argument('-lr', '--learning_rate', default=0.01, help='learning_rate', required=False)
+    """ parser.add_argument('-lr', '--learning_rate', default=0.01, help='learning_rate', required=False)
     parser.add_argument('-bs', '--Batch_size', default=2, help='batch_size', required=False)
     parser.add_argument('-epoches', '--epoches', type=int, default=5000, help='number of epoches', required=False)
     parser.add_argument('-nW', '--nW', default=0, help='evaluation iteration', required=False)
@@ -287,3 +288,4 @@ Output : Binary Polyp Segmentation Masks
         sam_args = None
     main(args=args, sam_args=sam_args, saver=saver)
 
+ """
