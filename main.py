@@ -4,7 +4,6 @@ import torch.optim as optim
 from inference import inference_ds_monai
 from train import train_single_epoch, train_single_epoch_monai
 from utils.model_utils import get_model, get_standard_model
-from utils.dataset_utils import get_dataset
 from segment_anything.utils.transforms import ResizeLongestSide
 
 import wandb
