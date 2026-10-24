@@ -7,7 +7,6 @@ from utils.model_utils import get_model, get_standard_model
 from utils.dataset_utils import get_dataset
 from segment_anything.utils.transforms import ResizeLongestSide
 
-from utils.utils import str2bool, set_seed, disable_batchnorm_running_stats
 import wandb
 from utils.scheduler import WarmupCosineSchedule, WarmupLinearSchedule
 
@@ -19,14 +18,13 @@ import argparse
 import sys
 import shlex
 from segment_anything import sam_model_registry
-from utils.utils import str2bool
+from utils.utils import disable_batchnorm_running_stats, str2bool, set_seed
+from utils.dataset_utils import get_train_val_dataloaders
 from utils.saver import Saver
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 print('\n'+'='*60)
 print('='*60)
-
-
 
 def main(args=None, sam_args=None, saver=None):
     print('\n'+'='*60)
@@ -109,9 +107,9 @@ def main(args=None, sam_args=None, saver=None):
         print("[MAIN] SAM is disabled. Using standard segmentor directly.")
         print(f"[MAIN] Using Idim = {img_dim}×{img_dim} for prompt learner input")
     print('='*60)   
-    input('stop') 
     
-    ds, ds_val = get_dataset(args, transform, img_dim)
+    train_dataloader, val_dataloader = get_train_val_dataloaders(args, img_dim)
+    input('stop!!!!!') 
     img_ch = ds.dataset[0][0][args['image_key']].shape[0]
     
     if not args['use_standard_net']:
@@ -253,40 +251,40 @@ For usage examples, see README.md
     parser.add_argument('--sam_version', type=str, default='vit_b', choices = ['vit_b', 'vit_h'], help='SAM version')
     parser.add_argument('--device_id', type=int, default=0, help='GPU index')
     parser.add_argument('--device', default='cuda', help="Device: 'cuda' or 'cpu'")
+    parser.add_argument('--disable_batchnorm_running_stats', type=str2bool, default=False, help='Disable batchnorm running stats')
     parser.add_argument('-Idim', '--Idim', type=int, default=512, help='Input image size (resize resolution)')
+    parser.add_argument('--image_key', type=str, default='image',help='Key for image in the data dict')
+    parser.add_argument('--mask_key', type=str, default='mask', help='Key for mask in the data dict')
+    parser.add_argument('--split_path', type=str, default=os.path.join(PROJECT_DIR, 'data', 'split.json'), help='Path to the JSON split file')
+    parser.add_argument('--n_fold', type=int, default=0, help='Fold index')
+    parser.add_argument('--cache_rate', type=float, default=0.0, help='Dataset cache rate (0.0 to 1.0)')
+    parser.add_argument('-nW', '--nW', type=int, default=0, help='Number of workers for train loader')
+    parser.add_argument('-nW_eval', '--nW_eval', type=int, default=0, help='Number of workers for val loader')
+    parser.add_argument('-bs', '--Batch_size', type=int, default=2, help='Batch size')
     args = vars(parser.parse_args())
     print(parser.description)
     
     """ parser.add_argument('-lr', '--learning_rate', default=0.01, help='learning_rate', required=False)
-    parser.add_argument('-bs', '--Batch_size', default=2, help='batch_size', required=False)
     parser.add_argument('-epoches', '--epoches', type=int, default=5000, help='number of epoches', required=False)
-    parser.add_argument('-nW', '--nW', default=0, help='evaluation iteration', required=False)
-    parser.add_argument('-nW_eval', '--nW_eval', default=0, help='evaluation iteration', required=False)
     parser.add_argument('-WD', '--WD', default=1e-4, help='evaluation iteration', required=False)
     parser.add_argument('-task', '--task', default='mslesseg', help='Task type (e.g., pancreas, spleen, prostate, brats, mslesseg, tooth)', required=False)
     parser.add_argument('-depth_wise', '--depth_wise', type = str2bool, default=False, help='image size', required=False)
     parser.add_argument('-order', '--order', default=85, type=int, help='image size', required=False)
-    parser.add_argument('-Idim', '--Idim', default=512, help='image size', required=False)
     parser.add_argument('-rotate', '--rotate', default=22, help='image size', required=False)
     parser.add_argument('-scale1', '--scale1', default=0.75, help='image size', required=False)
     parser.add_argument('-scale2', '--scale2', default=1.25, help='image size', required=False)
 
     parser.add_argument('--data_dir', type=str, default='', help='Path to the dataset directory', required=False)
-    parser.add_argument('--split_path', type=str, default='3DAutoSam_Pancreas/Dataset.json', help='Path to the split file')
     parser.add_argument('--train_batch_size', type=int, default=8)
     parser.add_argument('--save_every', type=int, default=10, help='Save model every n epochs')
-    parser.add_argument('--image_key', type=str, default='image',help='Modality to use for training')
-    parser.add_argument('--mask_key', type=str, default='mask', help='Mask modality')
     parser.add_argument('--spatial_crop_size', type=int, default=224, help='Spatial crop size')
     parser.add_argument('--pos_rand_crop', type=float, default=0.75, help='Positive ratio for random crop')
     parser.add_argument('--neg_rand_crop', type=float, default=0.25, help='Negative ratio for random crop')
     parser.add_argument('--axcodes', type=str, default='RAS', help='Axial codes')
     parser.add_argument('--num_slices', type=int, default=1, help='Number of slices')
-    parser.add_argument('--n_fold', type=int, default=0, help='Specify fold')
     parser.add_argument('--criterion', type=str, default='dice', choices=['dice', 'dice_ce'], help='Criterion')
     parser.add_argument('--include_background', type=str2bool, default=False, help='Include background in loss')
     parser.add_argument('--acc_steps', type=int, default=2, help='Number of accumulation steps')
-    parser.add_argument('--cache_rate', type=float, default=.7, help='Cache rate')
     parser.add_argument('--optim', type=str, default='Adam', help='Optimizer')
     parser.add_argument('--momentum', type=float, default=0, help='Momentum (if SGD is used)')
     parser.add_argument('--use_scheduler', type=str2bool, default=False, help='If use scheduler or not')
@@ -329,9 +327,7 @@ For usage examples, see README.md
 
     parser.add_argument('--segmentor_finetune_backbone', type=str2bool, default=False, help='If we want to train the miniSegmentor finetuning also the backbone')
     parser.add_argument('--decoder_channels', type=int, nargs='+', default=[], help='Decoder channels for UnetLike segmentor/aggregator')
-    
-    
-    parser.add_argument('--disable_batchnorm_running_stats', type=str2bool, default=False, help='Disable batchnorm running stats')
+
     
     parser.add_argument('--seed', type=int, default=42, help='Seed')"""
     
